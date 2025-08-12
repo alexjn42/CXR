@@ -1,7 +1,7 @@
 {
   "name": "CXR",
   "short_name": "CXR",
-  "description": "CXR — Vendas, Saques (+30%) e Retiradas com resumo por período",
+  "description": "CXR — Vendas, Saques (+30%) e Retiradas com resumo por período (inclui base do saque)",
   "icons": [
     {
       "src": "icons/icon-192.png",

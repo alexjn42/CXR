@@ -1,7 +1,7 @@
-// CXR v1.0 — Lógica idêntica ao CMJ NOVO, com chaves/caches próprios
+// CXR v1.1 — acrescenta 'Base dos Saques' no resumo
 const BR = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
 const DT = new Intl.DateTimeFormat('pt-BR', { dateStyle:'short', timeStyle:'short' });
-const KEY='cxr_store_v1'; // storage separado do CMJ
+const KEY='cxr_store_v1'; // mantém a mesma chave de dados
 
 function toCents(txt){
   let s=(txt||'').toString().trim().replace(/\s+/g,'').replace('R$','').replace(/\./g,'');
@@ -49,7 +49,7 @@ function renderHoje(){
       right.textContent = fmt(it.a);
     }else if(it.t==='saque'){
       left.innerHTML = `<div><b>Saque</b></div>
-        <div class="calc">Base: ${fmt(it.base)} • +30%: ${fmt(it.resto)} • Total: <b>${fmt(it.bruto)}</b> • Resto: <b>${fmt(it.resto)}</b></div>
+        <div class="calc">Base: ${fmt(it.base)} • +30%: ${fmt(it.resto)} • Total: <b>${fmt(it.bruto)}</b> • Resto (entrada): <b>${fmt(it.resto)}</b></div>
         <div class="meta">${DT.format(new Date(it.ts))}</div>`;
       right.textContent = fmt(it.bruto);
     }else{
@@ -68,18 +68,18 @@ function resumoPeriodo(fromIso, toIso){
   for(let dt=new Date(d(fromIso)); dt<=d(toIso); dt.setDate(dt.getDate()+1)){
     dates.push(dt.toISOString().slice(0,10));
   }
-  let totVendas=0, totSaqueBruto=0, totSobra=0, totRetira=0;
+  let totVendas=0, totSaqueBase=0, totSaqueBruto=0, totSobra=0, totRetira=0;
   dates.forEach(iso=>{
     const dia = store[iso] || [];
     dia.forEach(it=>{
       if(it.t==='venda'){ totVendas += it.a; }
-      else if(it.t==='saque'){ totSaqueBruto += it.bruto; totSobra += it.resto; }
+      else if(it.t==='saque'){ totSaqueBase += it.base; totSaqueBruto += it.bruto; totSobra += it.resto; }
       else if(it.t==='retira'){ totRetira += it.a; }
     });
   });
   const entradas = totVendas + totSobra;
   const saldo = entradas - totRetira;
-  return { totVendas, totSaqueBruto, totSobra, entradas, totRetira, saldo };
+  return { totVendas, totSaqueBase, totSaqueBruto, totSobra, entradas, totRetira, saldo };
 }
 
 function init(){
@@ -94,6 +94,7 @@ function init(){
   const btnLimpar=document.getElementById('btnLimpar');
   const resumoBox=document.getElementById('resumoBox');
   const totVendas=document.getElementById('totVendas');
+  const totSaqueBase=document.getElementById('totSaqueBase');
   const totSaqueBruto=document.getElementById('totSaqueBruto');
   const totSobraSaque=document.getElementById('totSobraSaque');
   const totEntradas=document.getElementById('totEntradas');
@@ -137,12 +138,13 @@ function init(){
     if(!from.value || !to.value){ alert('Selecione as duas datas.'); return; }
     if(from.value > to.value){ alert('A data "De" não pode ser maior que "Até".'); return; }
     const r = resumoPeriodo(from.value, to.value);
-    totVendas.textContent = fmt(r.totVendas);
-    totSaqueBruto.textContent = fmt(r.totSaqueBruto);
-    totSobraSaque.textContent = fmt(r.totSobra);
-    totEntradas.textContent = fmt(r.entradas);
+    totVendas.textContent    = fmt(r.totVendas);
+    totSaqueBase.textContent = fmt(r.totSaqueBase);
+    totSaqueBruto.textContent= fmt(r.totSaqueBruto);
+    totSobraSaque.textContent= fmt(r.totSobra);
+    totEntradas.textContent  = fmt(r.entradas);
     totRetiradas.textContent = fmt(r.totRetira);
-    totSaldo.textContent = fmt(r.saldo);
+    totSaldo.textContent     = fmt(r.saldo);
     resumoBox.style.display='block';
   });
 
