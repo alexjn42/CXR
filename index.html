@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CXR</title>
+    <meta name="theme-color" content="#72B7FF">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icons/icon-192.png">
+    <style>
+      :root { --blue:#1E88E5; --blue-light:#72B7FF; --green:#2E7D32; --red:#C62828; --bg:#f7fbff; }
+      * { box-sizing: border-box }
+      body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--bg); color:#123; }
+      header { position:sticky; top:0; z-index:5; background:white; padding:12px 16px; box-shadow: 0 4px 16px rgba(0,0,0,.06); display:flex; align-items:center; gap:12px }
+      header .logo { width:36px; height:36px; border-radius:10px; background:var(--blue-light); display:grid; place-items:center; font-weight:800; color:white; }
+      header h1 { font-size:18px; margin:0; }
+      .wrap { max-width: 900px; margin: 16px auto; padding: 0 12px; }
+      .card { background:white; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.08); padding:16px; margin-bottom:16px; }
+      .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap }
+      input[type="text"], input[type="date"] { padding:12px 14px; border:1px solid #dbe6f3; border-radius:12px; width:100%; font-size:16px}
+      .btn { background:var(--blue); color:white; border:none; padding:12px 14px; border-radius:12px; cursor:pointer; font-size:16px }
+      .btn.green{ background:var(--green) } .btn.red{ background:var(--red) } .btn.outline{ background:transparent; color:var(--blue); border:2px solid var(--blue) }
+      .hist { border-top:1px dashed #e5edf7; margin-top:10px; padding-top:8px; max-height:260px; overflow:auto }
+      .item { display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid #f2f6fb }
+      .left { display:flex; flex-direction:column }
+      .meta { font-size:12px; opacity:.65 }
+      .in { color: var(--green) } .out{ color: var(--red) }
+      .calc { font-size:12px; opacity:.85 }
+      .pill { font-size:12px; padding:4px 8px; border-radius:999px; background:#eef5ff; display:inline-block; margin-right:6px; }
+      .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:10px }
+      .footer { text-align:center; padding:24px; color:#567 }
+      .muted { opacity:.7 }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="logo">CXR</div>
+      <h1>CXR — Controle Rápido</h1>
+      <div style="flex:1"></div>
+      <button class="btn outline" id="installBtn" hidden>Instalar</button>
+    </header>
+
+    <div class="wrap">
+      <div class="card">
+        <div class="row">
+          <input id="valueInput" type="text" placeholder="Valor (ex: 10,00)" inputmode="decimal" autocomplete="off">
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn green" id="btnVenda">Venda</button>
+          <button class="btn" id="btnSaque">Saque (+30%)</button>
+          <button class="btn red" id="btnRetira">Retira</button>
+        </div>
+        <div id="saqueCalc" class="calc" style="margin-top:8px"></div>
+        <div class="hist" id="histList"></div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin:6px 0 12px">Resumo por período</h3>
+        <div class="row">
+          <div class="grid2" style="width:100%">
+            <input type="date" id="fromDate">
+            <input type="date" id="toDate">
+          </div>
+          <button class="btn" id="btnResumo">Gerar resumo</button>
+          <button class="btn outline" id="btnLimpar">Limpar período</button>
+        </div>
+        <div id="resumoBox" style="margin-top:12px; display:none">
+          <div class="item"><div><b>Total de Vendas</b></div><div id="totVendas"></div></div>
+          <div class="item"><div><b>Total de Saque (base+30%)</b></div><div id="totSaqueBruto"></div></div>
+          <div class="item"><div><b>Resto dos Saques (30%)</b></div><div id="totSobraSaque"></div></div>
+          <div class="item"><div><b>Entradas (Vendas + Restos)</b></div><div id="totEntradas"></div></div>
+          <div class="item"><div><b>Retiradas</b></div><div id="totRetiradas"></div></div>
+          <div class="item"><div><b>Saldo</b></div><div id="totSaldo"></div></div>
+        </div>
+      </div>
+
+      <p class="footer muted">Dados salvos no dispositivo (offline). Para instalar: menu do Chrome → <b>Instalar app</b>.</p>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+      let deferredPrompt;
+      const installBtn=document.getElementById('installBtn');
+      window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); deferredPrompt=e; installBtn.hidden=false; });
+      installBtn?.addEventListener('click', async ()=>{ if(!deferredPrompt) return; deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if(outcome==='accepted') installBtn.hidden=true; deferredPrompt=null; });
+      if('serviceWorker' in navigator){ window.addEventListener('load', ()=> navigator.serviceWorker.register('sw.js')); }
+    </script>
+  </body>
+</html>
