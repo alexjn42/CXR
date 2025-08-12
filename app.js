@@ -1,13 +1,25 @@
-// CXR v1.1 — acrescenta 'Base dos Saques' no resumo
+// CXR v1.1.1 — Enter = Venda, toast, vazio amigável, logs
 const BR = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
 const DT = new Intl.DateTimeFormat('pt-BR', { dateStyle:'short', timeStyle:'short' });
-const KEY='cxr_store_v1'; // mantém a mesma chave de dados
+const KEY='cxr_store_v1';
 
 function toCents(txt){
-  let s=(txt||'').toString().trim().replace(/\s+/g,'').replace('R$','').replace(/\./g,'');
+  let s=(txt||'').toString().trim();
+  s = s.replace(/\s+/g,'').replace(/[Rr]\$?/,'').replace(/\./g,'');
+  // normaliza 10, para 10,00 (se fim com vírgula)
+  if(/,\s*$/.test(s)) s += '00';
   if(!s) return 0;
-  if(s.includes(',')){ const [r,c='0']=s.split(','); return (parseInt(r||'0',10)*100)+parseInt((c+'0').slice(0,2),10); }
-  return parseInt(s,10)*100;
+  if(s.includes(',')){
+    const [r,c='0']=s.split(',');
+    const rc = (c+'0').slice(0,2);
+    const ri = parseInt(r||'0',10);
+    const ci = parseInt(rc,10);
+    if(Number.isNaN(ri) || Number.isNaN(ci)) return 0;
+    return ri*100 + ci;
+  }
+  const n = parseInt(s,10);
+  if(Number.isNaN(n)) return 0;
+  return n*100;
 }
 function fmt(c){ const sign = c<0?'-':''; const a=Math.abs(c); return sign+BR.format(a/100); }
 function todayISO(){ const d=new Date(); d.setHours(0,0,0,0); return d.toISOString().slice(0,10); }
@@ -19,6 +31,7 @@ function addVenda(cents){
   const store=load(); const iso=todayISO();
   getDay(store, iso).unshift({t:'venda', a:cents, ts:Date.now()});
   save(store);
+  console.log('[CXR] Venda adicionada:', cents);
 }
 function addSaque(cents){
   const base=cents;
@@ -27,12 +40,22 @@ function addSaque(cents){
   const store=load(); const iso=todayISO();
   getDay(store, iso).unshift({t:'saque', base, resto, bruto, ts:Date.now()});
   save(store);
+  console.log('[CXR] Saque adicionado:', {base, resto, bruto});
   return {base, resto, bruto};
 }
 function addRetira(cents){
   const store=load(); const iso=todayISO();
   getDay(store, iso).unshift({t:'retira', a:cents, ts:Date.now()});
   save(store);
+  console.log('[CXR] Retira adicionada:', cents);
+}
+
+function showToast(msg='Salvo'){
+  const t=document.getElementById('toast');
+  if(!t) return;
+  t.textContent = msg;
+  t.style.display='block';
+  setTimeout(()=> t.style.display='none', 1200);
 }
 
 function renderHoje(){
@@ -40,6 +63,12 @@ function renderHoje(){
   const store=load(); const iso=todayISO();
   const dia = store[iso] || [];
   list.innerHTML='';
+  if(dia.length===0){
+    const p=document.createElement('div');
+    p.className='meta'; p.textContent='Sem lançamentos hoje';
+    list.appendChild(p);
+    return;
+  }
   dia.forEach(it=>{
     const row=document.createElement('div'); row.className='item';
     const left=document.createElement('div'); left.className='left';
@@ -108,6 +137,7 @@ function init(){
     const c=toCents(val.value);
     if(c<=0){ alert('Informe um valor válido.'); return; }
     addVenda(c);
+    showToast('Venda salva');
     saqueCalc.textContent='';
     renderHoje();
     clearInput();
@@ -117,6 +147,7 @@ function init(){
     const c=toCents(val.value);
     if(c<=0){ alert('Informe um valor válido.'); return; }
     const {base, resto, bruto}=addSaque(c);
+    showToast('Saque salvo');
     saqueCalc.textContent = `Saque: Base ${fmt(base)} + 30% ${fmt(resto)} = Total ${fmt(bruto)} • Resto (30%) que entra no total: ${fmt(resto)}`;
     renderHoje();
     clearInput();
@@ -126,9 +157,18 @@ function init(){
     const c=toCents(val.value);
     if(c<=0){ alert('Informe um valor válido.'); return; }
     addRetira(c);
+    showToast('Retira salva');
     saqueCalc.textContent='';
     renderHoje();
     clearInput();
+  });
+
+  // Enter = Venda
+  document.getElementById('valueInput').addEventListener('keydown', (ev)=>{
+    if(ev.key==='Enter'){
+      ev.preventDefault();
+      venda.click();
+    }
   });
 
   const today = new Date(); const iso = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString().slice(0,10);
@@ -163,5 +203,6 @@ function init(){
   });
 
   renderHoje();
+  console.log('[CXR] App iniciado v1.1.1');
 }
 document.addEventListener('DOMContentLoaded', init);
